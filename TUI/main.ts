@@ -11,7 +11,11 @@ const tui = new TUI([
                         func: (self, _value, _parent) => 
                             self.data.width = ((self as TUITextI).value = `You have entered ${number} characters`).length 
                     })
-            ], "Test")
+            ], "Test"),
+        genTUIBox([
+            genTUIText("Hello", { color: "Gold" })
+        ], "Testing Colors", { color: "Green" }),
+        genTUIText("Hello, World!", { color: "Cyan", styles: [ "Bold", "Underline" ] })
     ]);
 
 tui.start(true);
