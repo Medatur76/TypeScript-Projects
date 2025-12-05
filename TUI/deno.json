@@ -1,6 +1,0 @@
-{
-  "imports": {
-    "process": "npm:process@^0.11.10",
-    "readline": "npm:readline@^1.3.0"
-  }
-}

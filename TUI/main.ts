@@ -1,56 +1,30 @@
-interface TUIElement {
-    render: (width: number, height: number) => void;
-}
+import { TUI, genTUIBox, genTUIText, TUITextI } from "./TUIData.ts";
 
-class TUI {
-    constructor() {
-    }
+const decoder = new TextDecoder(), buffer = new Uint8Array(1);
+let number = 0, key = '';
+const tui = new TUI([
+        genTUIBox([
+                genTUIText("Hello World!"),
+                genTUIText("You have entered 0 characters", {}, 
+                    {
+                        override: true, 
+                        func: (self, _value, _parent) => 
+                            self.data.width = ((self as TUITextI).value = `You have entered ${number} characters`).length 
+                    })
+            ], "Test")
+    ]);
 
-    public render(): void {
-        
-    }
-}
-
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-
-function write(message: string) {
-    Deno.stdout.write(encoder.encode(message));
-}
-
-// Set terminal to raw mode
-Deno.stdin.setRaw(true);
-//process.stdin.resume();
-//process.stdin.setEncoding('utf8');
-
-// Clear the screen
-write('\x1b[2J');
-write('\x1b[0;0H'); // Move cursor to top-left
-
-let text = '', key = '';
-const buffer = new Uint8Array(1);
-
-render();
+tui.start(true);
 
 while (true) {
+    tui.render();
     await Deno.stdin.read(buffer);
-    key = decoder.decode(buffer);
-    if (key === '\x03') { // Ctrl+C to exit
-        write('\x1b[2J'); // Clear screen on exit
-        write('\x1b[?25h'); // Show cursor
+    if ((key = decoder.decode(buffer)) == '\x03') { // Ctrl+C to exit
+        console.clear();
+        tui.write('\x1b[?25h'); // Show cursor
         Deno.exit();
-    } else if (key === '\r') { // Enter key
-        text = ''; // Clear text on Enter
-    } else if (key === '\x7f') { // Backspace
-        text = text.slice(0, -1);
     } else {
-        text += key;
+        number++;
+        tui.update(key);
     }
-    render();
 };
-
-function render() {
-    write('\x1b[2J'); // Clear current line
-    write(`\nType something: ${text}\nhi${text.length}`);
-    write(`\x1b[${text.length + 16};0H`); // Move cursor to top-left
-}
