@@ -1,4 +1,4 @@
-import { TUI, genTUIBox, genTUIText, TUITextI } from "./TUIData.ts";
+import { TUI, genTUIBox, genTUIText, TUITextI, genTUIRow } from "./TUIData.ts";
 
 const decoder = new TextDecoder(), buffer = new Uint8Array(1);
 let number = 0, key = '';
@@ -15,7 +15,21 @@ const tui = new TUI([
         genTUIBox([
             genTUIText("Hello", { color: "Gold" })
         ], "Testing Colors", { color: "Green" }),
-        genTUIText("Hello, World!", { color: "Cyan", styles: [ "Bold", "Underline" ] })
+        genTUIText("Hello, World!", { color: "Cyan", styles: [ "Bold", "Underline" ] }),
+        genTUIRow([
+            {
+                element: genTUIBox([
+                    genTUIText("Hellow from Row")
+                ], "Testing Rows 1"),
+                margin_left: 2
+            },
+            {
+                element: genTUIBox([
+                    genTUIText("Hello from Row")
+                ], "Testing Rows 2"),
+                margin_left: 5
+            }
+        ])
     ]);
 
 tui.start(true);
