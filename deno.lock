@@ -1,0 +1,22 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:random-words@^2.0.1": "2.0.1"
+  },
+  "npm": {
+    "random-words@2.0.1": {
+      "integrity": "sha512-nZNJAmgcFmtJMTDDIUCm/iK4R6RydC6NvALvWhYItXQrgYGk1F7Gww416LpVROFQtfVd5TaLEf4WuSsko03N7w==",
+      "dependencies": [
+        "seedrandom"
+      ]
+    },
+    "seedrandom@3.0.5": {
+      "integrity": "sha512-8OwmbklUNzwezjGInmZ+2clQmExQPvomqjL7LFqOYqtmuxRgQYqOD3mHaU+MvZn5FLUeVxVfQjwLZW/n/JFuqg=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:random-words@^2.0.1"
+    ]
+  }
+}

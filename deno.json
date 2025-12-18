@@ -2,5 +2,8 @@
   "tasks": {
     "tui": "cd TUI && deno -A main.ts && cd ..",
     "termtype": "cd TerminalType && deno -A main.ts && cd .."
+  },
+  "imports": {
+    "random-words": "npm:random-words@^2.0.1"
   }
 }

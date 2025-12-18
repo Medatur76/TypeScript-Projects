@@ -1,4 +1,4 @@
-type element = "Row" | "Box" | "Text";
+type element = "Row" | "Box" | "Text" | "Custom";
 type data = {
     width: number,
     height: number
@@ -15,7 +15,7 @@ const colorMap = {
     "White": { normal: "37m", bold: "47m" },
     "Default": { normal: "0m", bold: "0m" }
 }
-type style = "Bold" | "Underline" | "Reset" | { type: "Background", color: color };
+type style = "Bold" | "Underline" | "Reset" | { type: "Background", color: color } | { type: "Custom", character: string };
 type textOptions = {
     color?: color;
     styles?: style[];
@@ -65,7 +65,8 @@ export function textOptionsMap(txtOpt?: textOptions): string {
     if (styles.includes("Reset")) return "\x1b[0m";
     let output = "";
     for (const style of styles) {
-        output += "\x1b[" + (style == "Bold" ? "1;37m" : style == "Underline" ? "4;37m" : colorMap[(style as { type: "Background", color: color }).color].bold);
+        if (style == "Reset") return "\x1b[0m"; 
+        output += "\x1b[" + (style == "Bold" ? "1;37m" : style == "Underline" ? "4;37m" : style.type == "Background" ? colorMap[(style as { type: "Background", color: color }).color].bold : (style as { type: "Custom", character: string }).character);
     }
     return output + "\x1b[" + colorMap[color].normal;
 }
@@ -130,8 +131,8 @@ export function genTUIBox(objects?: TUIElementI[], title?: string, opt?: textOpt
         updateOverride ? updateOverride.func(self, value) : null;
         (self as TUIBoxI).objects.forEach(object => object.update(object, value));
         self.data = {
-            width: objects ? objects.reduce((max, current) => Math.max(max, current.data.width) + 2, title ? title.length : 0) : title ? title.length : 0,
-            height: (objects ? objects.length : 0) + 2
+            width: (self as TUIBoxI).objects ? (self as TUIBoxI).objects.reduce((max, current) => Math.max(max, current.data.width) + 2, title ? title.length : 0) : title ? title.length : 0,
+            height: ((self as TUIBoxI).objects ? (self as TUIBoxI).objects.length : 0) + 2
         };
     } };
 }
@@ -178,7 +179,7 @@ export class TUI {
             out += output[i] + "\n";
         }
         console.clear();
-        this.write(out);
+        this.write(out.substring(0, out.length-1));
     }
 
     public update(value: string): void {
@@ -189,6 +190,5 @@ export class TUI {
     public exit() {
         console.clear();
         this.write('\x1b[?25h'); // Show cursor
-        Deno.exit();
     }
 }
