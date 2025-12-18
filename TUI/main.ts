@@ -1,8 +1,7 @@
 import { TUI, genTUIBox, genTUIText, TUITextI, genTUIRow, ConsoleString, textOptionsMap } from "./TUIData.ts";
 
 const decoder = new TextDecoder(), buffer = new Uint8Array(4);
-let number = 0, key = '';
-let selection = 0;
+let number = 0, key = '', selection = 0;
 const tui = new TUI([
         genTUIBox([
                 genTUIText("Hello World!"),
@@ -72,13 +71,11 @@ while (true) {
     tui.render();
     const read = (await Deno.stdin.read(buffer)) || 0;
     if ((key = decoder.decode(buffer)).at(0) == '\x03') { // Ctrl+C to exit
-        console.clear();
-        tui.write('\x1b[?25h'); // Show cursor
-        Deno.exit();
+        tui.exit();
     } else if (key.at(0) == '\x0D') {
-        number = 0;
         key = "enter";
     } else if (key.at(0) == '\x7F') {
+        number = 0;
         key = "delete";
     } else if (key.at(0) == '\x1B' && key.at(1) == '\x5B') {
         switch (key.at(2)) {

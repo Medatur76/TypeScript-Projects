@@ -3,7 +3,7 @@ type data = {
     width: number,
     height: number
 };
-type color = "Black" | "Red" | "Green" | "Gold" | "Blue" | "Purple" | "Cyan" | "White";
+type color = "Black" | "Red" | "Green" | "Gold" | "Blue" | "Purple" | "Cyan" | "White" | "Default";
 const colorMap = {
     "Black": { normal: "30m", bold: "40m" },
     "Red": { normal: "31m", bold: "41m" },
@@ -12,7 +12,8 @@ const colorMap = {
     "Blue": { normal: "34m", bold: "44m" },
     "Purple": { normal: "35m", bold: "45m" },
     "Cyan": { normal: "36m", bold: "46m" },
-    "White": { normal: "37m", bold: "47m" }
+    "White": { normal: "37m", bold: "47m" },
+    "Default": { normal: "0m", bold: "0m" }
 }
 type style = "Bold" | "Underline" | "Reset" | { type: "Background", color: color };
 type textOptions = {
@@ -28,10 +29,7 @@ export class ConsoleString {
     public length: number = 0;
 
     constructor (string: styledString[]) {
-        for (const stringI of string) {
-            this.text += (stringI.styleCode ?? "") + stringI.text;
-            this.length += stringI.text.length;
-        }
+        this.appends(string);
     }
 
     public append(string: styledString): ConsoleString {
@@ -41,10 +39,7 @@ export class ConsoleString {
     }
 
     public appends(string: styledString[]): ConsoleString {
-        for (const stringI of string) {
-            this.text += (stringI.styleCode ?? "") + stringI.text;
-            this.length += stringI.text.length;
-        }
+        for (const stringI of string) this.append(stringI);
         return this;
     }
 
@@ -55,10 +50,7 @@ export class ConsoleString {
     }
 
     public appendcs(string: ConsoleString[]): ConsoleString {
-        for (const stringI of string) {
-            this.text += stringI.print();
-            this.length += stringI.length;
-        }
+        for (const stringI of string) this.appendc(stringI);
         return this;
     }
 
@@ -67,14 +59,15 @@ export class ConsoleString {
     }
 }
 export function textOptionsMap(txtOpt?: textOptions): string {
-    if (!txtOpt || (!txtOpt.color && !txtOpt.styles)) return "";
-    if (!txtOpt.styles) return "\x1b[0;" + colorMap[txtOpt.color ?? "White"].normal;
-    if (txtOpt.styles?.includes("Reset")) return "\x1b[0m";
+    if (!txtOpt) return "";
+    const { color = "Default", styles = [] } = txtOpt;
+    if (styles.length == 0) return "\x1b[0;" + colorMap[color].normal;
+    if (styles.includes("Reset")) return "\x1b[0m";
     let output = "";
-    for (const style of txtOpt.styles) {
+    for (const style of styles) {
         output += "\x1b[" + (style == "Bold" ? "1;37m" : style == "Underline" ? "4;37m" : colorMap[(style as { type: "Background", color: color }).color].bold);
     }
-    return output + "\x1b[" + colorMap[txtOpt.color ?? "White"].normal;
+    return output + "\x1b[" + colorMap[color].normal;
 }
 
 type renderFunc = (self: TUIElementI, width: number, height: number) => ConsoleString[];
@@ -97,7 +90,7 @@ export interface TUIRowI extends TUIElementI {
     objects: {element: TUIElementI, margin_left: number}[];
 }
 
-export function genTUIRow(objects?: {element: TUIElementI, margin_left: number}[]): TUIRowI {
+export function genTUIRow(objects?: {element: TUIElementI, margin_left: number}[], updateOverride?: funcOverride<updateFunc>): TUIRowI {
     return { type: "Row", objects: objects ?? [], data: { width: objects ? objects.reduce((output, current) => output + current.margin_left + current.element.data.width, 0) : 0, height: objects ? objects.reduce((max, current) => Math.max(max, current.element.data.height), 0) : 0}, render: (self, width, height) => {
         const output: ConsoleString[] = [];
         let targetpos = 0;
@@ -112,7 +105,10 @@ export function genTUIRow(objects?: {element: TUIElementI, margin_left: number}[
             if (object.element.type == "Box") targetpos += 2;
         }
         return output;
-    }, update: (self, value) => (self as TUIRowI).objects.forEach(object => object.element.update(object.element, value)) };
+    }, update: updateOverride && updateOverride.override ? updateOverride.func : (self, value) => {
+        updateOverride ? updateOverride.func(self, value) : null;
+        (self as TUIRowI).objects.forEach(object => object.element.update(object.element, value));
+    }};
 }
 
 export interface TUIBoxI extends TUIElementI {
@@ -146,7 +142,11 @@ export interface TUITextI extends TUIElementI {
 }
 
 export function genTUIText(value: string, opt?: textOptions, updateOverride?: funcOverride<updateFunc>): TUITextI {
-    return { type: "Text", data: { width: value.split("\n").reduce((max, value) => Math.max(max, value.length), 0), height: value.split("\n").length }, value: value, render: (self, _width, _height) => (self as TUITextI).value.split("\n").map((value) => new ConsoleString([{ text: value, styleCode: textOptionsMap(opt) }]).append({ text: "", styleCode: "\x1b[0m" })), update: updateOverride ? updateOverride.func : (_self, _value) => null };
+    return { type: "Text", data: { width: value.split("\n").reduce((max, value) => Math.max(max, value.length), 0), height: value.split("\n").length }, value: value, render: (self, _width, _height) => (self as TUITextI).value.split("\n").map((value) => new ConsoleString([{ text: value, styleCode: textOptionsMap(opt) }]).append({ text: "", styleCode: "\x1b[0m" })), update: updateOverride && updateOverride.override ? updateOverride.func : (self, value) => {
+        updateOverride ? updateOverride.func(self, value) : null;
+        self.data.width = (self as TUITextI).value.split("\n").reduce((max, value) => Math.max(max, value.length), 0);
+        self.data.height = (self as TUITextI).value.split("\n").length;
+    } };
 }
 
 export class TUI {
@@ -165,6 +165,7 @@ export class TUI {
         // Set terminal to raw mode
         Deno.stdin.setRaw(true);
         if (hideCursor) this.write('\x1b[?25l');
+        else this.write('\x1b[?25h');
     }
 
     public render(): void {
@@ -183,5 +184,11 @@ export class TUI {
     public update(value: string): void {
         for (const element of this.elements)
             element.update(element, value);
+    }
+
+    public exit() {
+        console.clear();
+        this.write('\x1b[?25h'); // Show cursor
+        Deno.exit();
     }
 }
